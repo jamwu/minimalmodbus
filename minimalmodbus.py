@@ -355,7 +355,7 @@ class Instrument():
         self._genericCommand(16, registeraddress, value, numberOfRegisters=2, signed=signed, payloadformat='long')
 
 
-    def read_float(self, registeraddress, functioncode=3, numberOfRegisters=2):
+    def read_float(self, registeraddress, functioncode=3, numberOfRegisters=2,registerInvert = False):
         """Read a floating point number from the slave.
 
         Floats are stored in two or more consecutive 16-bit registers in the slave. The
@@ -389,7 +389,7 @@ class Instrument():
         """
         _checkFunctioncode(functioncode, [3, 4])
         _checkInt(numberOfRegisters, minvalue=2, maxvalue=4, description='number of registers')
-        return self._genericCommand(functioncode, registeraddress, numberOfRegisters=numberOfRegisters, payloadformat='float')
+        return self._genericCommand(functioncode, registeraddress, numberOfRegisters=numberOfRegisters, payloadformat='float',registerInvert=registerInvert)
 
 
     def write_float(self, registeraddress, value, numberOfRegisters=2):
@@ -534,7 +534,7 @@ class Instrument():
 
 
     def _genericCommand(self, functioncode, registeraddress, value=None, \
-            numberOfDecimals=0, numberOfRegisters=1, signed=False, payloadformat=None):
+            numberOfDecimals=0, numberOfRegisters=1, signed=False, payloadformat=None,registerInvert = False):
         """Generic command for reading and writing registers and bits.
 
         Args:
@@ -738,7 +738,7 @@ class Instrument():
                 return _bytestringToLong(registerdata, signed, numberOfRegisters)
 
             elif payloadformat == PAYLOADFORMAT_FLOAT:
-                return _bytestringToFloat(registerdata, numberOfRegisters)
+                return _bytestringToFloat(registerdata, numberOfRegisters,registerInvert)
 
             elif payloadformat == PAYLOADFORMAT_REGISTERS:
                 return _bytestringToValuelist(registerdata, numberOfRegisters)
@@ -1430,7 +1430,7 @@ def _floatToBytestring(value, numberOfRegisters=2):
     return outstring
 
 
-def _bytestringToFloat(bytestring, numberOfRegisters=2):
+def _bytestringToFloat(bytestring, numberOfRegisters=2,registerInvert = False):
     """Convert a four-byte string to a float.
 
     Floats are stored in two or more consecutive 16-bit registers in the slave.
@@ -1465,8 +1465,10 @@ def _bytestringToFloat(bytestring, numberOfRegisters=2):
     if len(bytestring) != numberOfBytes:
         raise ValueError('Wrong length of the byte string! Given value is {0!r}, and numberOfRegisters is {1!r}.'.\
             format(bytestring, numberOfRegisters))
-
-    return _unpack(formatcode, bytestring)
+    if registerInvert:
+        return _unpack(formatcode, bytestring[numberOfRegisters:]+bytestring[:numberOfRegisters])
+    else:
+        return _unpack(formatcode, bytestring)
 
 
 def _textstringToBytestring(inputstring, numberOfRegisters=16):
